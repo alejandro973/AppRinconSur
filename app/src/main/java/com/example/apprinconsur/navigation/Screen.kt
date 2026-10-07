@@ -14,3 +14,7 @@ sealed class Screen(val route: String) {
         }
     }
 }
+
+//La clase hereda la ruta base detail_page/{itemId} desde Screen y, justo gracias a la función buildRoute(),
+// toma ese valor dinámico que recibe por parámetro (itemId) para reemplazar el comodín {itemId} y armar la ruta final lista para que
+// el sistema de navegación la ejecute sin errores.

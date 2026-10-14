@@ -10,9 +10,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**Si las pantallas son las que piden viajar y los eventos son las órdenes de viaje,
+ *  el MainViewModel es el cerebro o director de orquesta que coordina todo esto de forma limpia y segura.
+ */
+
 class MainViewModel : ViewModel() {
 
     // Canal privado mutable para emitir los eventos de navegación
+    /*
+    Es una tubería interna y privada donde el ViewModel anota las órdenes de viaje.
+     Al ser privada, ninguna pantalla puede corromperla o enviar órdenes a la fuerza por su cuenta.
+     */
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
 
     // Canal público de solo lectura para que la UI pueda observarlo de manera segura

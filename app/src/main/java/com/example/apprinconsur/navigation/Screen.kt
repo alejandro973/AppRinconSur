@@ -6,6 +6,12 @@ sealed class Screen(val route: String) {
     data object ProfileScreen : Screen(route = "profile_page")
     data object SettingsScreen : Screen(route = "settings_page")
 
+    data object AccessSelectionScreen : Screen(route = "access_page")
+
+    data object  RegistroScreen: Screen(route = "registro_page")
+
+    data object  ResumenScreen: Screen(route = "resumen_page")
+
     // Ejemplo de Ruta con Argumentos (para cuando necesites pasar un ID, por ejemplo, de un producto)
     data class Detail(val itemId: String) : Screen(route = "detail_page/{itemId}") {
         // Función para construir la ruta final reemplazando el parámetro

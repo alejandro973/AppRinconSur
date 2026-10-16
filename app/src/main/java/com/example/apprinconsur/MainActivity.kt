@@ -1,5 +1,6 @@
 package com.example.apprinconsur
 
+import com.example.apprinconsur.ui.theme.AppRinconSurTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,16 +15,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.apprinconsur.navigation.NavigationEvent
 import com.example.apprinconsur.navigation.Screen
-import com.example.apprinconsur.ui.screens.HomeScreen
-import com.example.apprinconsur.ui.screens.ProfileScreen
-import com.example.apprinconsur.ui.screens.SettingsScreen
-import com.example.apprinconsur.ui.theme.AppRinconSurTheme
+import com.example.apprinconsur.ui.screens.*
+import com.example.apprinconsur.viewmodel.LoginViewModel
 import com.example.apprinconsur.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : ComponentActivity() {
-    // Inicializamos nuestro ViewModel centralizado
+    // Inicializamos nuestros ViewModels
     private val mainViewModel: MainViewModel by viewModels()
+    private val loginViewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,13 +35,12 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // Escuchamos los eventos de navegación que emite el ViewModel
+                    // Escuchamos los eventos de navegación globales
                     LaunchedEffect(key1 = true) {
                         mainViewModel.navigationEvents.collectLatest { event ->
                             when (event) {
                                 is NavigationEvent.NavigateTo -> {
                                     navController.navigate(event.route.route) {
-                                        // Configuraciones opcionales del evento
                                         if (event.singleTop) launchSingleTop = true
                                     }
                                 }
@@ -55,12 +54,25 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Definimos el mapa de pantallas (NavHost) usando los nombres correctos de Screen
+                    // Definimos el mapa de pantallas (NavHost)
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.HomeScreen.route
+                        startDestination = Screen.LoginScreen.route // La app ahora inicia en el Login
                     ) {
-                        // Ruta de Inicio
+                        // 1. Ruta de Inicio de Sesión (Login)
+                        composable(route = Screen.LoginScreen.route) {
+                            LoginScreen(
+                                viewModel = loginViewModel,
+                                onLoginSuccess = {
+                                    // Al validar con éxito, navegamos al Home principal y limpiamos el login del stack
+                                    navController.navigate(Screen.HomeScreen.route) {
+                                        popUpTo(Screen.LoginScreen.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // 2. Ruta de Inicio (Dashboard de la app)
                         composable(route = Screen.HomeScreen.route) {
                             HomeScreen(
                                 onNavigateToProfile = {
@@ -69,7 +81,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Ruta de Perfil
+                        // 3. Ruta de Perfil
                         composable(route = Screen.ProfileScreen.route) {
                             ProfileScreen(
                                 onNavigateBack = {
@@ -81,7 +93,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Ruta de Configuración
+                        // 4. Ruta de Configuración
                         composable(route = Screen.SettingsScreen.route) {
                             SettingsScreen(
                                 onNavigateBack = {

@@ -1,6 +1,5 @@
 package com.example.apprinconsur
 
-import com.example.apprinconsur.ui.theme.AppRinconSurTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,12 +15,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.apprinconsur.navigation.NavigationEvent
 import com.example.apprinconsur.navigation.Screen
 import com.example.apprinconsur.ui.screens.*
+import com.example.apprinconsur.ui.theme.AppRinconSurTheme
 import com.example.apprinconsur.viewmodel.LoginViewModel
 import com.example.apprinconsur.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : ComponentActivity() {
-    // Inicializamos nuestros ViewModels
     private val mainViewModel: MainViewModel by viewModels()
     private val loginViewModel: LoginViewModel by viewModels()
 
@@ -35,7 +34,6 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // Escuchamos los eventos de navegación globales
                     LaunchedEffect(key1 = true) {
                         mainViewModel.navigationEvents.collectLatest { event ->
                             when (event) {
@@ -54,25 +52,38 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Definimos el mapa de pantallas (NavHost)
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.LoginScreen.route // La app ahora inicia en el Login
+                        startDestination = Screen.LoginScreen.route
                     ) {
-                        // 1. Ruta de Inicio de Sesión (Login)
+                        // 1. Pantalla de Inicio de Sesión
                         composable(route = Screen.LoginScreen.route) {
                             LoginScreen(
                                 viewModel = loginViewModel,
                                 onLoginSuccess = {
-                                    // Al validar con éxito, navegamos al Home principal y limpiamos el login del stack
-                                    navController.navigate(Screen.HomeScreen.route) {
+                                    // Al hacer login exitoso, vamos directo a la selección de accesos de la tienda
+                                    navController.navigate(Screen.AccessSelectionScreen.route) {
                                         popUpTo(Screen.LoginScreen.route) { inclusive = true }
                                     }
                                 }
                             )
                         }
 
-                        // 2. Ruta de Inicio (Dashboard de la app)
+                        // 2. Pantalla de Selección de Accesos (1 al 4)
+                        composable(route = Screen.AccessSelectionScreen.route) {
+                            AccessSelectionScreen(
+                                onNavigateToRegistro = { accesoSeleccionado ->
+                                    // Aquí luego conectaremos con el formulario de la Guía 11
+                                    // Por ahora, podemos navegar al Home o preparar la ruta de registro
+                                    mainViewModel.navigateTo(Screen.HomeScreen)
+                                },
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // 3. Pantalla de Inicio / Dashboard (Opcional en el flujo)
                         composable(route = Screen.HomeScreen.route) {
                             HomeScreen(
                                 onNavigateToProfile = {
@@ -81,7 +92,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Ruta de Perfil
+                        // 4. Pantalla de Perfil
                         composable(route = Screen.ProfileScreen.route) {
                             ProfileScreen(
                                 onNavigateBack = {
@@ -93,7 +104,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 4. Ruta de Configuración
+                        // 5. Pantalla de Configuración
                         composable(route = Screen.SettingsScreen.route) {
                             SettingsScreen(
                                 onNavigateBack = {

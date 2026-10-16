@@ -52,6 +52,9 @@ class MainActivity : ComponentActivity() {
                                 is NavigationEvent.NavigateUp -> {
                                     navController.navigateUp()
                                 }
+                                else -> {
+                                    // Rama de seguridad para cualquier otro evento futuro
+                                }
                             }
                         }
                     }
@@ -76,7 +79,6 @@ class MainActivity : ComponentActivity() {
                         composable(route = Screen.AccessSelectionScreen.route) {
                             AccessSelectionScreen(
                                 onNavigateToRegistro = { accesoSeleccionado ->
-                                    // Navegamos al registro pasando el acceso seleccionado codificado en la ruta
                                     navController.navigate("registro_screen/$accesoSeleccionado")
                                 },
                                 onNavigateBack = {
@@ -85,7 +87,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Pantalla de Registro de Flujo (Con el acceso recibido por parámetro)
+                        // 3. Pantalla de Registro de Flujo
                         composable(
                             route = "registro_screen/{nombreAcceso}",
                             arguments = listOf(navArgument("nombreAcceso") { type = NavType.StringType })
@@ -95,8 +97,19 @@ class MainActivity : ComponentActivity() {
                                 nombreAcceso = nombreAcceso,
                                 viewModel = registroViewModel,
                                 onRegistroExitoso = {
-                                    // Al guardar con éxito el flujo, podemos volver a la selección de accesos o ir a un resumen
-                                    navController.popBackStack()
+                                    // Obtenemos el estado actual directo desde el registroViewModel
+                                    val estadoActual = registroViewModel.estado.value
+
+                                    // Guardamos el registro en el MainViewModel
+                                    mainViewModel.agregarRegistro(
+                                        nombreAcceso = nombreAcceso,
+                                        tipoFlujo = estadoActual.tipoFlujo,
+                                        rangoEtario = estadoActual.rangoEtario,
+                                        cantidadPersonas = estadoActual.cantidadPersonas,
+                                        observaciones = estadoActual.observaciones
+                                    )
+                                    // Navegamos a la pantalla de resumen
+                                    navController.navigate("resumen_screen")
                                 },
                                 onNavigateBack = {
                                     navController.popBackStack()
@@ -104,7 +117,17 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 4. Pantalla de Inicio / Dashboard (Opcional)
+                        // 4. Pantalla de Resumen de Registros acumulados
+                        composable(route = "resumen_screen") {
+                            ResumenScreen(
+                                mainViewModel = mainViewModel,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // 5. Pantalla de Inicio / Dashboard (Opcional)
                         composable(route = Screen.HomeScreen.route) {
                             HomeScreen(
                                 onNavigateToProfile = {
@@ -113,7 +136,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 5. Pantalla de Perfil
+                        // 6. Pantalla de Perfil
                         composable(route = Screen.ProfileScreen.route) {
                             ProfileScreen(
                                 onNavigateBack = {
@@ -125,7 +148,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 6. Pantalla de Configuración
+                        // 7. Pantalla de Configuración
                         composable(route = Screen.SettingsScreen.route) {
                             SettingsScreen(
                                 onNavigateBack = {

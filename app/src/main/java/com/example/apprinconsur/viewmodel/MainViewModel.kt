@@ -1,6 +1,10 @@
 package com.example.apprinconsur.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.apprinconsur.data.RegistroDbHelper
+import kotlinx.coroutines.withContext
 import com.example.apprinconsur.model.RegistroItem
 import com.example.apprinconsur.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,7 +26,9 @@ import com.example.apprinconsur.navigation.NavigationEvent
 
 
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = RegistroDbHelper(application)
 
     // Canal privado mutable para emitir los eventos de navegación
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
@@ -33,6 +39,12 @@ class MainViewModel : ViewModel() {
     // ── NUEVO: Lista acumulativa de registros de flujo de la tienda Rincón Sur ──
     private val _registrosList = MutableStateFlow<List<RegistroItem>>(emptyList())
     val registrosList: StateFlow<List<RegistroItem>> = _registrosList.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _registrosList.value = withContext(Dispatchers.IO) { db.listar() }
+        }
+    }
 
     // Función que emite el evento para navegar hacia una pantalla específica
     fun navigateTo(route: Screen, singleTop: Boolean = false) {
@@ -60,20 +72,23 @@ class MainViewModel : ViewModel() {
         nombreAcceso: String,
         tipoFlujo: String,
         rangoEtario: String,
-        cantidadPersonas: String,
+        movimiento: String,
+        cantidadPersonas: Int,
         observaciones: String
     ) {
-        val cantidadInt = cantidadPersonas.toIntOrNull() ?: 1
         val nuevoItem = RegistroItem(
             nombreAcceso = nombreAcceso,
             tipoFlujo = tipoFlujo,
             rangoEtario = rangoEtario,
-            cantidadPersonas = cantidadInt,
-            observaciones = observaciones
+            movimiento = movimiento,
+            cantidadPersonas = cantidadPersonas,
+            observaciones = observaciones,
+            fechaHora = System.currentTimeMillis()
         )
 
-        _registrosList.update { listaActual ->
-            listaActual + nuevoItem
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { db.insertar(nuevoItem) }
+            _registrosList.update { listaActual -> listOf(nuevoItem) + listaActual }
         }
     }
 }

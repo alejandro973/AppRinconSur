@@ -52,9 +52,6 @@ class MainActivity : ComponentActivity() {
                                 is NavigationEvent.NavigateUp -> {
                                     navController.navigateUp()
                                 }
-                                else -> {
-                                    // Rama de seguridad para cualquier otro evento futuro
-                                }
                             }
                         }
                     }
@@ -104,10 +101,12 @@ class MainActivity : ComponentActivity() {
                                     mainViewModel.agregarRegistro(
                                         nombreAcceso = nombreAcceso,
                                         tipoFlujo = estadoActual.tipoFlujo,
+                                        movimiento = estadoActual.movimiento,
                                         rangoEtario = estadoActual.rangoEtario,
                                         cantidadPersonas = estadoActual.cantidadPersonas,
                                         observaciones = estadoActual.observaciones
                                     )
+                                    registroViewModel.reiniciar()
                                     // Navegamos a la pantalla de resumen
                                     navController.navigate("resumen_screen")
                                 },

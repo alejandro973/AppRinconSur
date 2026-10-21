@@ -14,6 +14,17 @@ class RegistroViewModel : ViewModel() {
     // Estado expuesto de solo lectura para la interfaz
     val estado: StateFlow<RegistroUiState> = _estado
 
+    // Al elegir Ingreso se descarta el tipo de flujo: solo aplica a las salidas
+    fun onMovimientoChange(valor: String) {
+        _estado.update {
+            it.copy(
+                movimiento = valor,
+                tipoFlujo = if (valor == "Salida") it.tipoFlujo else "",
+                errores = it.errores.copy(movimiento = null, tipoFlujo = null)
+            )
+        }
+    }
+
     // Actualiza el tipo de flujo (Tránsito / Compra) y limpia su error
     fun onTipoFlujoChange(valor: String) {
         _estado.update {
@@ -28,11 +39,18 @@ class RegistroViewModel : ViewModel() {
         }
     }
 
-    // Actualiza la cantidad de personas y limpia su error
-    fun onCantidadPersonasChange(valor: String) {
+    fun onCantidadMas() {
+        _estado.update { it.copy(cantidadPersonas = it.cantidadPersonas + 1) }
+    }
+
+    fun onCantidadMenos() {
         _estado.update {
-            it.copy(cantidadPersonas = valor, errores = it.errores.copy(cantidadPersonas = null))
+            if (it.cantidadPersonas > 1) it.copy(cantidadPersonas = it.cantidadPersonas - 1) else it
         }
+    }
+
+    fun reiniciar() {
+        _estado.value = RegistroUiState()
     }
 
     // Actualiza las observaciones opcionales
@@ -47,17 +65,15 @@ class RegistroViewModel : ViewModel() {
         val estadoActual = _estado.value
 
         val errores = RegistroErrores(
-            tipoFlujo = if (estadoActual.tipoFlujo.isBlank()) "Debe seleccionar si es Tránsito o Compra" else null,
-            rangoEtario = if (estadoActual.rangoEtario.isBlank()) "Debe seleccionar un rango etario" else null,
-            cantidadPersonas = if (estadoActual.cantidadPersonas.toIntOrNull() == null || estadoActual.cantidadPersonas.toInt() <= 0) {
-                "Ingrese una cantidad válida mayor a 0"
-            } else null
+            movimiento = if (estadoActual.movimiento.isBlank()) "Debe seleccionar Ingreso o Salida" else null,
+            tipoFlujo = if (estadoActual.movimiento == "Salida" && estadoActual.tipoFlujo.isBlank()) "Debe indicar si la salida fue con compra o sin compra" else null,
+            rangoEtario = if (estadoActual.rangoEtario.isBlank()) "Debe seleccionar un rango etario" else null
         )
 
         val hayErrores = listOfNotNull(
+            errores.movimiento,
             errores.tipoFlujo,
-            errores.rangoEtario,
-            errores.cantidadPersonas
+            errores.rangoEtario
         ).isNotEmpty()
 
         _estado.update { it.copy(errores = errores) }

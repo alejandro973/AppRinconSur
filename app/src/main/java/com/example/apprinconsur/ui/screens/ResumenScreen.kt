@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.apprinconsur.model.RegistroItem
+import com.example.apprinconsur.ui.utils.formatearFechaHora
 import com.example.apprinconsur.viewmodel.MainViewModel
 
 @Composable
@@ -20,6 +21,10 @@ fun ResumenScreen(
 ) {
     // Observamos la lista acumulada de registros desde el MainViewModel
     val registros by mainViewModel.registrosList.collectAsState()
+    val totalIngresos = registros.filter { it.movimiento == "Ingreso" }.sumOf { it.cantidadPersonas }
+    val totalSalidas = registros.filter { it.movimiento == "Salida" }.sumOf { it.cantidadPersonas }
+    val salidasConCompra = registros.filter { it.movimiento == "Salida" && it.tipoFlujo == "Compra" }.sumOf { it.cantidadPersonas }
+    val salidasSinCompra = registros.filter { it.movimiento == "Salida" && it.tipoFlujo == "Tránsito" }.sumOf { it.cantidadPersonas }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -43,6 +48,35 @@ fun ResumenScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Ingresos: $totalIngresos", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Salidas: $totalSalidas", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Dentro: ${totalIngresos - totalSalidas}", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Con compra: $salidasConCompra", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Sin compra: $salidasSinCompra", style = MaterialTheme.typography.titleMedium)
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -110,7 +144,13 @@ fun RegistroCard(item: RegistroItem) {
                 )
                 // Indicador de tipo de flujo
                 Badge {
-                    Text(text = item.tipoFlujo)
+                    Text(
+                        text = when (item.tipoFlujo) {
+                            "Compra" -> "${item.movimiento} · Con compra"
+                            "Tránsito" -> "${item.movimiento} · Sin compra"
+                            else -> item.movimiento
+                        }
+                    )
                 }
             }
 
@@ -122,6 +162,10 @@ fun RegistroCard(item: RegistroItem) {
             )
             Text(
                 text = "Cantidad de personas: ${item.cantidadPersonas}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Fecha y hora: ${formatearFechaHora(item.fechaHora)}",
                 style = MaterialTheme.typography.bodyMedium
             )
 

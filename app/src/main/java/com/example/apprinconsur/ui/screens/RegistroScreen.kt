@@ -2,15 +2,20 @@ package com.example.apprinconsur.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.apprinconsur.ui.utils.formatearHora
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.apprinconsur.viewmodel.RegistroViewModel
 
@@ -24,6 +29,14 @@ fun RegistroScreen(
 ) {
     val estado by viewModel.estado.collectAsState()
     val scrollState = rememberScrollState()
+    var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            ahora = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -53,11 +66,16 @@ fun RegistroScreen(
                 color = MaterialTheme.colorScheme.secondary
             )
 
+            Text(
+                text = "Hora del dispositivo: ${formatearHora(ahora)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sección: Tipo de Flujo (Tránsito vs Compra)
             Text(
-                text = "Tipo de Flujo de Cliente *",
+                text = "Movimiento *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -66,32 +84,60 @@ fun RegistroScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { viewModel.onTipoFlujoChange("Tránsito") },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (estado.tipoFlujo == "Tránsito") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Tránsito", color = if (estado.tipoFlujo == "Tránsito") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Button(
-                    onClick = { viewModel.onTipoFlujoChange("Compra") },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (estado.tipoFlujo == "Compra") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Compra", color = if (estado.tipoFlujo == "Compra") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                listOf("Ingreso", "Salida").forEach { opcion ->
+                    Button(
+                        onClick = { viewModel.onMovimientoChange(opcion) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (estado.movimiento == opcion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = opcion, color = if (estado.movimiento == opcion) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
-            if (estado.errores.tipoFlujo != null) {
+            if (estado.errores.movimiento != null) {
                 Text(
-                    text = estado.errores.tipoFlujo!!,
+                    text = estado.errores.movimiento!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                 )
+            }
+
+            // Sección: resultado de la visita (solo al registrar una Salida)
+            if (estado.movimiento == "Salida") {
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "¿La persona compró? *",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Compra" to "Con compra", "Tránsito" to "Sin compra (solo paso)").forEach { (valor, etiqueta) ->
+                        Button(
+                            onClick = { viewModel.onTipoFlujoChange(valor) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (estado.tipoFlujo == valor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = etiqueta, color = if (estado.tipoFlujo == valor) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (estado.errores.tipoFlujo != null) {
+                    Text(
+                        text = estado.errores.tipoFlujo!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -129,20 +175,39 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo: Cantidad de personas
-            OutlinedTextField(
-                value = estado.cantidadPersonas,
-                onValueChange = { viewModel.onCantidadPersonasChange(it) },
-                label = { Text(text = "Cantidad de personas *") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = estado.errores.cantidadPersonas != null,
-                supportingText = {
-                    estado.errores.cantidadPersonas?.let { errorMsg ->
-                        Text(text = errorMsg, color = MaterialTheme.colorScheme.error)
-                    }
-                },
+            Text(
+                text = "Cantidad de personas *",
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { viewModel.onCantidadMenos() },
+                    enabled = estado.cantidadPersonas > 1,
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Text(text = "-", style = MaterialTheme.typography.headlineMedium)
+                }
+                Text(
+                    text = estado.cantidadPersonas.toString(),
+                    style = MaterialTheme.typography.displaySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(96.dp)
+                )
+                Button(
+                    onClick = { viewModel.onCantidadMas() },
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Text(text = "+", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

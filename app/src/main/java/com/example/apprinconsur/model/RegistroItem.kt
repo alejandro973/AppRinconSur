@@ -8,6 +8,8 @@ data class RegistroItem(
     val nombreAcceso: String,                      // Acceso de la tienda (ej: "Acceso 1")
     val tipoFlujo: String,                         // "Tránsito" o "Compra"
     val rangoEtario: String,                       // "Joven", "Adulto", "Adulto Mayor"
+    val movimiento: String,                        // "Ingreso" o "Salida"
     val cantidadPersonas: Int,                     // Cantidad numérica ingresada
-    val observaciones: String                      // Comentarios opcionales
+    val observaciones: String,                     // Comentarios opcionales
+    val fechaHora: Long = System.currentTimeMillis() // Hora local del dispositivo al registrar
 )

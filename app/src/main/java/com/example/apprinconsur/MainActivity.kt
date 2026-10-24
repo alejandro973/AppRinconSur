@@ -58,8 +58,20 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.LoginScreen.route
+                        startDestination = "estado_screen" // <-- Arranca en la pantalla de animaciones de la Guía 12
                     ) {
+                        // 8. Pantalla de Estado y Animaciones (Pantalla inicial para la presentación)
+                        composable(route = "estado_screen") {
+                            EstadoScreen(
+                                onNavigateToLogin = {
+                                    navController.navigate(Screen.LoginScreen.route) {
+                                        popUpTo("estado_screen") { inclusive = true }
+                                    }
+                                }
+
+                            )
+                        }
+
                         // 1. Pantalla de Inicio de Sesión
                         composable(route = Screen.LoginScreen.route) {
                             LoginScreen(

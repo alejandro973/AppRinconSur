@@ -1,83 +1,63 @@
 package com.example.apprinconsur.viewmodel
 
-import androidx.lifecycle.ViewModel
-import com.example.apprinconsur.model.RegistroErrores
-import com.example.apprinconsur.model.RegistroUiState
-import kotlinx.coroutines.flow.MutableStateFlow
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.apprinconsur.data.AppDatabase
+import com.example.apprinconsur.data.RegistroEntity
+import com.example.apprinconsur.data.RegistroRepository
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class RegistroViewModel : ViewModel() {
-    // Estado interno mutable del formulario
-    private val _estado = MutableStateFlow(RegistroUiState())
+class RegistroViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Estado expuesto de solo lectura para la interfaz
-    val estado: StateFlow<RegistroUiState> = _estado
+    // Inicializamos la base de datos, el DAO y el Repositorio de manera limpia
+    private val database = AppDatabase.get(application)
+    private val repository = RegistroRepository(database.RegistroDao())
 
-    // Al elegir Ingreso se descarta el tipo de flujo: solo aplica a las salidas
-    fun onMovimientoChange(valor: String) {
-        _estado.update {
-            it.copy(
-                movimiento = valor,
-                tipoFlujo = if (valor == "Salida") it.tipoFlujo else "",
-                errores = it.errores.copy(movimiento = null, tipoFlujo = null)
-            )
-        }
-    }
-
-    // Actualiza el tipo de flujo (Tránsito / Compra) y limpia su error
-    fun onTipoFlujoChange(valor: String) {
-        _estado.update {
-            it.copy(tipoFlujo = valor, errores = it.errores.copy(tipoFlujo = null))
-        }
-    }
-
-    // Actualiza el rango etario y limpia su error
-    fun onRangoEtarioChange(valor: String) {
-        _estado.update {
-            it.copy(rangoEtario = valor, errores = it.errores.copy(rangoEtario = null))
-        }
-    }
-
-    fun onCantidadMas() {
-        _estado.update { it.copy(cantidadPersonas = it.cantidadPersonas + 1) }
-    }
-
-    fun onCantidadMenos() {
-        _estado.update {
-            if (it.cantidadPersonas > 1) it.copy(cantidadPersonas = it.cantidadPersonas - 1) else it
-        }
-    }
-
-    fun reiniciar() {
-        _estado.value = RegistroUiState()
-    }
-
-    // Actualiza las observaciones opcionales
-    fun onObservacionesChange(valor: String) {
-        _estado.update {
-            it.copy(observaciones = valor)
-        }
-    }
-
-    // Validación del formulario de conteo
-    fun validarFormulario(): Boolean {
-        val estadoActual = _estado.value
-
-        val errores = RegistroErrores(
-            movimiento = if (estadoActual.movimiento.isBlank()) "Debe seleccionar Ingreso o Salida" else null,
-            tipoFlujo = if (estadoActual.movimiento == "Salida" && estadoActual.tipoFlujo.isBlank()) "Debe indicar si la salida fue con compra o sin compra" else null,
-            rangoEtario = if (estadoActual.rangoEtario.isBlank()) "Debe seleccionar un rango etario" else null
+    // Lista reactiva de registros expuesta hacia la interfaz (Jetpack Compose)
+    val listaRegistros: StateFlow<List<RegistroEntity>> = repository.registros
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
-        val hayErrores = listOfNotNull(
-            errores.movimiento,
-            errores.tipoFlujo,
-            errores.rangoEtario
-        ).isNotEmpty()
+    // Función para agregar un nuevo registro desde el formulario
+    fun guardarRegistro(
+        nombreAcceso: String,
+        tipoFlujo: String,
+        movimiento: String,
+        rangoEtario: String,
+        cantidadPersonas: Int,
+        observaciones: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.agregarRegistro(
+                    nombreAcceso = nombreAcceso,
+                    tipoFlujo = tipoFlujo,
+                    movimiento = movimiento,
+                    rangoEtario = rangoEtario,
+                    cantidadPersonas = cantidadPersonas,
+                    observaciones = observaciones
+                )
+                // Callback opcional para limpiar campos o navegar al guardar con éxito
+                onSuccess()
+            } catch (e: Exception) {
+                // Aquí puedes manejar errores de validación si deseas mostrar un mensaje en pantalla
+                e.printStackTrace()
+            }
+        }
+    }
 
-        _estado.update { it.copy(errores = errores) }
-
-        return !hayErrores
+    // Función para eliminar un registro existente
+    fun eliminarRegistro(registro: RegistroEntity) {
+        viewModelScope.launch {
+            repository.eliminarRegistro(registro)
+        }
     }
 }

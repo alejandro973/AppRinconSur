@@ -10,9 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.apprinconsur.model.RegistroItem
-import com.example.apprinconsur.ui.utils.formatearFechaHora
 import com.example.apprinconsur.viewmodel.MainViewModel
+import com.example.apprinconsur.viewmodel.RegistroItem
 
 @Composable
 fun ResumenScreen(
@@ -162,10 +161,6 @@ fun RegistroCard(item: RegistroItem) {
             )
             Text(
                 text = "Cantidad de personas: ${item.cantidadPersonas}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Fecha y hora: ${formatearFechaHora(item.fechaHora)}",
                 style = MaterialTheme.typography.bodyMedium
             )
 

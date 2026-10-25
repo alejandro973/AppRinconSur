@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,8 +19,10 @@ import com.example.apprinconsur.navigation.NavigationEvent
 import com.example.apprinconsur.navigation.Screen
 import com.example.apprinconsur.ui.screens.*
 import com.example.apprinconsur.ui.theme.AppRinconSurTheme
+import com.example.apprinconsur.viewmodel.EstadoViewModel
 import com.example.apprinconsur.viewmodel.LoginViewModel
 import com.example.apprinconsur.viewmodel.MainViewModel
+import com.example.apprinconsur.viewmodel.ProfileViewModel
 import com.example.apprinconsur.viewmodel.RegistroViewModel
 import kotlinx.coroutines.flow.collectLatest
 
@@ -58,21 +61,23 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = "estado_screen" // <-- Arranca en la pantalla de animaciones de la Guía 12
+                        startDestination = "estado_screen" // 👈 La app arranca con la barra de carga animada
                     ) {
-                        // 8. Pantalla de Estado y Animaciones (Pantalla inicial para la presentación)
+                        // 0. Pantalla de Carga Inicial (Splash con barra de progreso)
                         composable(route = "estado_screen") {
+                            val estadoViewModel: EstadoViewModel = viewModel()
                             EstadoScreen(
+                                viewModel = estadoViewModel,
                                 onNavigateToLogin = {
                                     navController.navigate(Screen.LoginScreen.route) {
+                                        // Limpiamos del historial para que al presionar "atrás" no regrese a la carga
                                         popUpTo("estado_screen") { inclusive = true }
                                     }
                                 }
-
                             )
                         }
 
-                        // 1. Pantalla de Inicio de Sesión
+                        // 1. Pantalla de Inicio de Sesión (Con acceso al registro de perfil)
                         composable(route = Screen.LoginScreen.route) {
                             LoginScreen(
                                 viewModel = loginViewModel,
@@ -80,11 +85,14 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(Screen.AccessSelectionScreen.route) {
                                         popUpTo(Screen.LoginScreen.route) { inclusive = true }
                                     }
+                                },
+                                onNavigateToProfile = {
+                                    navController.navigate(Screen.ProfileScreen.route)
                                 }
                             )
                         }
 
-                        // 2. Pantalla de Selección de Accesos (1 al 4)
+                        // 2. Pantalla de Selección de Accesos
                         composable(route = Screen.AccessSelectionScreen.route) {
                             AccessSelectionScreen(
                                 onNavigateToRegistro = { accesoSeleccionado ->
@@ -106,21 +114,9 @@ class MainActivity : ComponentActivity() {
                                 nombreAcceso = nombreAcceso,
                                 viewModel = registroViewModel,
                                 onRegistroExitoso = {
-                                    // Obtenemos el estado actual directo desde el registroViewModel
-                                    val estadoActual = registroViewModel.estado.value
-
-                                    // Guardamos el registro en el MainViewModel
-                                    mainViewModel.agregarRegistro(
-                                        nombreAcceso = nombreAcceso,
-                                        tipoFlujo = estadoActual.tipoFlujo,
-                                        movimiento = estadoActual.movimiento,
-                                        rangoEtario = estadoActual.rangoEtario,
-                                        cantidadPersonas = estadoActual.cantidadPersonas,
-                                        observaciones = estadoActual.observaciones
-                                    )
-                                    registroViewModel.reiniciar()
-                                    // Navegamos a la pantalla de resumen
-                                    navController.navigate("resumen_screen")
+                                    navController.navigate(Screen.ResumenScreen.route) {
+                                        popUpTo("registro_screen/{nombreAcceso}") { inclusive = false }
+                                    }
                                 },
                                 onNavigateBack = {
                                     navController.popBackStack()
@@ -128,8 +124,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 4. Pantalla de Resumen de Registros acumulados
-                        composable(route = "resumen_screen") {
+                        // 4. Pantalla de Resumen
+                        composable(route = Screen.ResumenScreen.route) {
                             ResumenScreen(
                                 mainViewModel = mainViewModel,
                                 onNavigateBack = {
@@ -138,32 +134,22 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 5. Pantalla de Inicio / Dashboard (Opcional)
-                        composable(route = Screen.HomeScreen.route) {
-                            HomeScreen(
-                                onNavigateToProfile = {
-                                    mainViewModel.navigateTo(Screen.ProfileScreen)
-                                }
-                            )
-                        }
-
-                        // 6. Pantalla de Perfil
+                        // 5. Pantalla de Perfil (Con inyección de su ProfileViewModel y cámara)
                         composable(route = Screen.ProfileScreen.route) {
+                            val profileViewModel: ProfileViewModel = viewModel()
                             ProfileScreen(
+                                viewModel = profileViewModel,
                                 onNavigateBack = {
-                                    mainViewModel.navigateBack()
-                                },
-                                onNavigateToSettings = {
-                                    mainViewModel.navigateTo(Screen.SettingsScreen)
+                                    navController.popBackStack()
                                 }
                             )
                         }
 
-                        // 7. Pantalla de Configuración
+                        // 6. Pantalla de Configuración
                         composable(route = Screen.SettingsScreen.route) {
                             SettingsScreen(
                                 onNavigateBack = {
-                                    mainViewModel.navigateBack()
+                                    navController.popBackStack()
                                 }
                             )
                         }

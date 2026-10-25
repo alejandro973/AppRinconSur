@@ -14,7 +14,8 @@ import com.example.apprinconsur.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: () -> Unit // Función lambda para navegar cuando el login sea exitoso
+    onLoginSuccess: () -> Unit, // Función lambda para navegar cuando el login sea exitoso
+    onNavigateToProfile: () -> Unit // 👈 Nueva función lambda para ir a la creación de perfil
 ) {
     // Observamos el estado reactivo del ViewModel
     val estado by viewModel.estado.collectAsState()
@@ -83,6 +84,18 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Iniciar Sesión")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 👤 Botón secundario para registrarse / crear usuario por primera vez
+            OutlinedButton(
+                onClick = {
+                    onNavigateToProfile()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "¿No tienes cuenta? Regístrate aquí")
             }
         }
     }

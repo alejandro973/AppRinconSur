@@ -54,6 +54,19 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun actualizarRegistro(registro: RegistroEntity, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.actualizarRegistro(
+                    registro.copy(observaciones = registro.observaciones.trim())
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     // Función para eliminar un registro existente
     fun eliminarRegistro(registro: RegistroEntity) {
         viewModelScope.launch {

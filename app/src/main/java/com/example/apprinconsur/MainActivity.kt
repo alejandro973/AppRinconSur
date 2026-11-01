@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -127,11 +129,36 @@ class MainActivity : ComponentActivity() {
                         // 4. Pantalla de Resumen
                         composable(route = Screen.ResumenScreen.route) {
                             ResumenScreen(
-                                mainViewModel = mainViewModel,
+                                viewModel = registroViewModel,
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                },
+                                onEditarRegistro = { id ->
+                                    navController.navigate("registro_editar/$id")
                                 }
                             )
+                        }
+
+                        composable(
+                            route = "registro_editar/{registroId}",
+                            arguments = listOf(navArgument("registroId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val registroId = backStackEntry.arguments?.getLong("registroId") ?: 0L
+                            val registros by registroViewModel.listaRegistros.collectAsState()
+                            val registro = registros.firstOrNull { it.id == registroId }
+                            if (registro != null) {
+                                RegistroScreen(
+                                    nombreAcceso = registro.nombreAcceso,
+                                    viewModel = registroViewModel,
+                                    registroExistente = registro,
+                                    onRegistroExitoso = {
+                                        navController.popBackStack()
+                                    },
+                                    onNavigateBack = {
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
                         }
 
                         // 5. Pantalla de Perfil (Con inyección de su ProfileViewModel y cámara)

@@ -7,19 +7,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.apprinconsur.viewmodel.MainViewModel
-import com.example.apprinconsur.viewmodel.RegistroItem
+import com.example.apprinconsur.data.RegistroEntity
+import com.example.apprinconsur.ui.utils.formatearFechaHora
+import com.example.apprinconsur.viewmodel.RegistroViewModel
 
 @Composable
 fun ResumenScreen(
-    mainViewModel: MainViewModel,
-    onNavigateBack: () -> Unit // Para volver al menú o pantallas anteriores
+    viewModel: RegistroViewModel,
+    onNavigateBack: () -> Unit,
+    onEditarRegistro: (Long) -> Unit
 ) {
-    // Observamos la lista acumulada de registros desde el MainViewModel
-    val registros by mainViewModel.registrosList.collectAsState()
+    val registros by viewModel.listaRegistros.collectAsState()
+    var idAEliminar by rememberSaveable { mutableStateOf<Long?>(null) }
+    val registroAEliminar = registros.firstOrNull { it.id == idAEliminar }
+
     val totalIngresos = registros.filter { it.movimiento == "Ingreso" }.sumOf { it.cantidadPersonas }
     val totalSalidas = registros.filter { it.movimiento == "Salida" }.sumOf { it.cantidadPersonas }
     val salidasConCompra = registros.filter { it.movimiento == "Salida" && it.tipoFlujo == "Compra" }.sumOf { it.cantidadPersonas }
@@ -34,7 +41,6 @@ fun ResumenScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Título de la pantalla
             Text(
                 text = "Resumen de Registros",
                 style = MaterialTheme.typography.headlineMedium,
@@ -79,7 +85,6 @@ fun ResumenScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Si la lista está vacía, mostramos un mensaje informativo
             if (registros.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -94,20 +99,22 @@ fun ResumenScreen(
                     )
                 }
             } else {
-                // Lista de registros usando LazyColumn para mejor rendimiento
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(registros) { item ->
-                        RegistroCard(item = item)
+                    items(registros, key = { it.id }) { item ->
+                        RegistroCard(
+                            item = item,
+                            onEditar = { onEditarRegistro(item.id) },
+                            onEliminar = { idAEliminar = item.id }
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botón para volver atrás
             OutlinedButton(
                 onClick = { onNavigateBack() },
                 modifier = Modifier.fillMaxWidth()
@@ -116,11 +123,39 @@ fun ResumenScreen(
             }
         }
     }
+
+    if (registroAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { idAEliminar = null },
+            title = { Text("Eliminar registro") },
+            text = {
+                Text("¿Seguro que quieres eliminar este registro de ${registroAEliminar.nombreAcceso}? Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.eliminarRegistro(registroAEliminar)
+                        idAEliminar = null
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { idAEliminar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
-// Tarjeta visual individual para cada registro en la lista
 @Composable
-fun RegistroCard(item: RegistroItem) {
+fun RegistroCard(
+    item: RegistroEntity,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -141,7 +176,6 @@ fun RegistroCard(item: RegistroItem) {
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                // Indicador de tipo de flujo
                 Badge {
                     Text(
                         text = when (item.tipoFlujo) {
@@ -155,6 +189,11 @@ fun RegistroCard(item: RegistroItem) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Text(
+                text = formatearFechaHora(item.fechaHora),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text(
                 text = "Rango etario: ${item.rangoEtario}",
                 style = MaterialTheme.typography.bodyMedium
@@ -171,6 +210,20 @@ fun RegistroCard(item: RegistroItem) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onEditar) {
+                    Text("Editar")
+                }
+                TextButton(onClick = onEliminar) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

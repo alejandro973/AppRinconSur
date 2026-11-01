@@ -11,7 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.example.apprinconsur.data.RegistroEntity
+import com.example.apprinconsur.ui.utils.formatearFechaHora
 import com.example.apprinconsur.ui.utils.formatearHora
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
@@ -26,14 +29,15 @@ fun RegistroScreen(
     nombreAcceso: String, // Recibe el acceso seleccionado (ej: "Acceso 1")
     viewModel: RegistroViewModel,
     onRegistroExitoso: () -> Unit, // Acción al guardar con éxito
-    onNavigateBack: () -> Unit      // Para volver atrás
+    onNavigateBack: () -> Unit,     // Para volver atrás
+    registroExistente: RegistroEntity? = null
 ) {
     // Estados locales para los campos del formulario conectados a la base de datos
-    var movimiento by remember { mutableStateOf("Ingreso") }
-    var tipoFlujo by remember { mutableStateOf("Tránsito") }
-    var rangoEtario by remember { mutableStateOf("Adulto") }
-    var cantidadPersonas by remember { mutableStateOf(1) }
-    var observaciones by remember { mutableStateOf("") }
+    var movimiento by rememberSaveable { mutableStateOf(registroExistente?.movimiento ?: "Ingreso") }
+    var tipoFlujo by rememberSaveable { mutableStateOf(registroExistente?.tipoFlujo ?: "Tránsito") }
+    var rangoEtario by rememberSaveable { mutableStateOf(registroExistente?.rangoEtario ?: "Adulto") }
+    var cantidadPersonas by rememberSaveable { mutableStateOf(registroExistente?.cantidadPersonas ?: 1) }
+    var observaciones by rememberSaveable { mutableStateOf(registroExistente?.observaciones ?: "") }
 
     val scrollState = rememberScrollState()
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -60,7 +64,7 @@ fun RegistroScreen(
         ) {
             // Título de la pantalla
             Text(
-                text = "Registro de Flujo",
+                text = if (registroExistente != null) "Editar Registro" else "Registro de Flujo",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -75,7 +79,7 @@ fun RegistroScreen(
             )
 
             Text(
-                text = "Hora del dispositivo: ${formatearHora(ahora)}",
+                text = if (registroExistente != null) "Registrado el: ${formatearFechaHora(registroExistente.fechaHora)}" else "Hora del dispositivo: ${formatearHora(ahora)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -215,23 +219,37 @@ fun RegistroScreen(
             // Botón Guardar Registro (Inserta directamente en la BD SQLite con el ViewModel)
             Button(
                 onClick = {
-                    viewModel.guardarRegistro(
-                        nombreAcceso = nombreAcceso,
-                        tipoFlujo = tipoFlujo,
-                        movimiento = movimiento,
-                        rangoEtario = rangoEtario,
-                        cantidadPersonas = cantidadPersonas,
-                        observaciones = observaciones,
-                        onSuccess = {
-                            onRegistroExitoso()
-                        }
-                    )
+                    val tipoFinal = if (movimiento == "Salida") tipoFlujo else "Tránsito"
+                    if (registroExistente != null) {
+                        viewModel.actualizarRegistro(
+                            registro = registroExistente.copy(
+                                tipoFlujo = tipoFinal,
+                                movimiento = movimiento,
+                                rangoEtario = rangoEtario,
+                                cantidadPersonas = cantidadPersonas,
+                                observaciones = observaciones
+                            ),
+                            onSuccess = { onRegistroExitoso() }
+                        )
+                    } else {
+                        viewModel.guardarRegistro(
+                            nombreAcceso = nombreAcceso,
+                            tipoFlujo = tipoFinal,
+                            movimiento = movimiento,
+                            rangoEtario = rangoEtario,
+                            cantidadPersonas = cantidadPersonas,
+                            observaciones = observaciones,
+                            onSuccess = {
+                                onRegistroExitoso()
+                            }
+                        )
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
             ) {
-                Text(text = "Guardar y Registrar en SQLite")
+                Text(text = if (registroExistente != null) "Guardar Cambios" else "Guardar y Registrar en SQLite")
             }
 
             Spacer(modifier = Modifier.height(12.dp))

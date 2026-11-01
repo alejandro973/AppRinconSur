@@ -1,12 +1,14 @@
 package com.example.apprinconsur.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.apprinconsur.viewmodel.LoginViewModel
@@ -45,6 +47,8 @@ fun LoginScreen(
                 value = estado.correo,
                 onValueChange = { viewModel.onCorreoChange(it) },
                 label = { Text(text = "Correo electrónico") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
                 isError = estado.errores.correo != null,
                 supportingText = {
                     estado.errores.correo?.let { errorMsg ->

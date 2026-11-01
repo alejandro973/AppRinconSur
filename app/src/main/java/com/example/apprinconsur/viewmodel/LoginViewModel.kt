@@ -3,6 +3,7 @@ package com.example.apprinconsur.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.apprinconsur.model.LoginErrores
 import com.example.apprinconsur.model.LoginUiState
+import com.example.apprinconsur.ui.utils.correoValido
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -34,7 +35,11 @@ class LoginViewModel : ViewModel() {
 
         // Definimos las reglas de validación para el trabajador de la tienda
         val errores = LoginErrores(
-            correo = if (estadoActual.correo.isBlank()) "El correo corporativo es obligatorio" else null,
+            correo = when {
+                estadoActual.correo.isBlank() -> "El correo corporativo es obligatorio"
+                !correoValido(estadoActual.correo) -> "Ingresa un correo válido que incluya @"
+                else -> null
+            },
             clave = if (estadoActual.clave.length < 6) "La contraseña debe tener al menos 6 caracteres" else null
         )
 
@@ -49,5 +54,9 @@ class LoginViewModel : ViewModel() {
 
         // Retorna true si el formulario es válido (no hay errores), false si falla
         return !hayErrores
+    }
+
+    fun limpiar() {
+        _estado.value = LoginUiState()
     }
 }

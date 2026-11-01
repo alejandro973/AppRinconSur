@@ -9,6 +9,7 @@ import com.example.apprinconsur.data.AppDatabase
 import com.example.apprinconsur.data.ProfileRepository
 import com.example.apprinconsur.model.ProfileErrores
 import com.example.apprinconsur.model.ProfileUiState
+import com.example.apprinconsur.ui.utils.correoValido
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,7 +116,11 @@ class ProfileViewModel(
     fun validarFormulario(): Boolean {
         val current = _estado.value
         val errorNombre = if (current.nombre.isBlank()) "El nombre no puede estar vacío" else null
-        val errorCorreo = if (current.correo.isBlank()) "El correo no puede estar vacío" else null
+        val errorCorreo = when {
+            current.correo.isBlank() -> "El correo no puede estar vacío"
+            !correoValido(current.correo) -> "Ingresa un correo válido que incluya @"
+            else -> null
+        }
 
         val hayErrores = errorNombre != null || errorCorreo != null
 

@@ -3,9 +3,13 @@ package com.example.apprinconsur.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,10 +17,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.apprinconsur.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +38,18 @@ fun ProfileScreen(
     val context = LocalContext.current
     val estado by viewModel.estado.collectAsState()
     val scrollState = rememberScrollState()
+
+    val rutaFoto = estado.rutaImagen
+    val fotoPerfil by produceState<ImageBitmap?>(initialValue = null, rutaFoto) {
+        value = withContext(Dispatchers.IO) {
+            val archivo = File(rutaFoto)
+            if (rutaFoto.isNotBlank() && archivo.exists()) {
+                BitmapFactory.decodeFile(archivo.absolutePath)?.asImageBitmap()
+            } else {
+                null
+            }
+        }
+    }
 
     // 📸 Lanzador de la cámara para capturar una vista previa de la foto
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -73,6 +96,31 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                val foto = fotoPerfil
+                if (foto != null) {
+                    Image(
+                        bitmap = foto,
+                        contentDescription = "Foto de perfil",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = "Sin foto",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Botón para activar la cámara del celular con validación de permisos
             Button(
                 onClick = {
@@ -92,16 +140,7 @@ fun ProfileScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Tomar Foto con Cámara")
-            }
-
-            // Muestra un texto indicando si ya se capturó la foto
-            if (estado.rutaImagen.isNotEmpty()) {
-                Text(
-                    text = "Estado de foto: ${estado.rutaImagen}",
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Text(text = if (fotoPerfil != null) "Volver a tomar foto" else "Tomar Foto con Cámara")
             }
 
             Spacer(modifier = Modifier.height(24.dp))

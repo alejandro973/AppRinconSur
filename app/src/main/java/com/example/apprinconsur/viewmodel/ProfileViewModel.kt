@@ -3,32 +3,46 @@ package com.example.apprinconsur.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.apprinconsur.data.AppDatabase
 import com.example.apprinconsur.data.ProfileRepository
 import com.example.apprinconsur.model.ProfileErrores
 import com.example.apprinconsur.model.ProfileUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
-class ProfileViewModel(application: Application) : AndroidViewModel(application) {
+class ProfileViewModel(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
 
     private val database = AppDatabase.get(application)
     private val repository = ProfileRepository(database.profileDao())
 
-    // Estado centralizado de la pantalla de perfil
-    private val _estado = MutableStateFlow(ProfileUiState())
+    private val _estado = MutableStateFlow(
+        ProfileUiState(
+            nombre = savedStateHandle[KEY_NOMBRE] ?: "",
+            correo = savedStateHandle[KEY_CORREO] ?: "",
+            rutaImagen = savedStateHandle[KEY_RUTA_IMAGEN] ?: ""
+        )
+    )
     val estado: StateFlow<ProfileUiState> = _estado.asStateFlow()
 
     init {
-        // Carga automática si ya existe un perfil guardado en la base de datos
-        viewModelScope.launch {
-            repository.profileFlow.collect { profile ->
-                if (profile != null) {
-                    _estado.update {
+        if (!savedStateHandle.contains(KEY_BORRADOR)) {
+            viewModelScope.launch {
+                val profile = repository.profileFlow.first()
+                if (profile != null && !savedStateHandle.contains(KEY_BORRADOR)) {
+                    actualizar {
                         it.copy(
                             nombre = profile.nombre,
                             correo = profile.correo,
@@ -40,8 +54,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private fun actualizar(transform: (ProfileUiState) -> ProfileUiState) {
+        _estado.update(transform)
+        val actual = _estado.value
+        savedStateHandle[KEY_NOMBRE] = actual.nombre
+        savedStateHandle[KEY_CORREO] = actual.correo
+        savedStateHandle[KEY_RUTA_IMAGEN] = actual.rutaImagen
+    }
+
+    private fun marcarBorrador() {
+        savedStateHandle[KEY_BORRADOR] = true
+    }
+
     fun onNombreChange(nuevoNombre: String) {
-        _estado.update {
+        marcarBorrador()
+        actualizar {
             it.copy(
                 nombre = nuevoNombre,
                 errores = it.errores.copy(nombre = null)
@@ -50,7 +77,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onCorreoChange(nuevoCorreo: String) {
-        _estado.update {
+        marcarBorrador()
+        actualizar {
             it.copy(
                 correo = nuevoCorreo,
                 errores = it.errores.copy(correo = null)
@@ -59,17 +87,31 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onRutaImagenChange(nuevaRuta: String) {
-        _estado.update { it.copy(rutaImagen = nuevaRuta) }
+        marcarBorrador()
+        actualizar { it.copy(rutaImagen = nuevaRuta) }
     }
 
-    // 📸 Función para procesar y registrar la foto capturada por la cámara
     fun onFotoCapturada(bitmap: Bitmap) {
-        _estado.update {
-            it.copy(rutaImagen = "Foto capturada exitosamente")
+        viewModelScope.launch {
+            val ruta = withContext(Dispatchers.IO) {
+                val directorio = directorioFotos().apply { mkdirs() }
+                val archivo = File(directorio, "perfil_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(archivo).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                archivo.absolutePath
+            }
+            marcarBorrador()
+            actualizar { it.copy(rutaImagen = ruta) }
         }
     }
 
-    // Validación de campos obligatorios
+    private fun directorioFotos() = File(getApplication<Application>().filesDir, "fotos")
+
+    private fun limpiarFotosAntiguas(rutaActual: String) {
+        directorioFotos().listFiles()?.forEach { archivo ->
+            if (archivo.absolutePath != rutaActual) archivo.delete()
+        }
+    }
+
     fun validarFormulario(): Boolean {
         val current = _estado.value
         val errorNombre = if (current.nombre.isBlank()) "El nombre no puede estar vacío" else null
@@ -84,7 +126,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         return !hayErrores
     }
 
-    // Guardar en la base de datos Room
     fun guardarPerfil(onSuccess: () -> Unit = {}) {
         if (validarFormulario()) {
             viewModelScope.launch {
@@ -95,11 +136,19 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         correo = current.correo,
                         rutaImagen = current.rutaImagen
                     )
+                    withContext(Dispatchers.IO) { limpiarFotosAntiguas(current.rutaImagen) }
                     onSuccess()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
         }
+    }
+
+    private companion object {
+        const val KEY_NOMBRE = "perfil_nombre"
+        const val KEY_CORREO = "perfil_correo"
+        const val KEY_RUTA_IMAGEN = "perfil_ruta_imagen"
+        const val KEY_BORRADOR = "perfil_borrador"
     }
 }

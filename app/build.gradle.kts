@@ -56,6 +56,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Red: Retrofit y Gson para consumo de APIs REST
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
     // Datos: DataStore (preferencias) y Room (SQLite); ksp genera el código al compilar
     implementation("androidx.datastore:datastore-preferences:1.1.0")
     val roomVersion = "2.7.1"
